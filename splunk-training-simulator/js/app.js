@@ -33,12 +33,31 @@ class SplunkSimulator {
 
     setupEventListeners() {
         // Sidebar toggle (for mobile)
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', () => {
-                document.getElementById('sidebar').classList.toggle('open');
+        const sidebarToggleOpen = document.getElementById('sidebarToggleOpen');
+        const sidebarToggleClose = document.getElementById('sidebarToggleClose');
+        const sidebar = document.getElementById('sidebar');
+
+        if (sidebarToggleOpen) {
+            sidebarToggleOpen.addEventListener('click', () => {
+                sidebar.classList.add('open');
             });
         }
+
+        if (sidebarToggleClose) {
+            sidebarToggleClose.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+            });
+        }
+
+        // Close sidebar when clicking outside (mobile)
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 1024 &&
+                sidebar.classList.contains('open') &&
+                !sidebar.contains(e.target) &&
+                !sidebarToggleOpen.contains(e.target)) {
+                sidebar.classList.remove('open');
+            }
+        });
 
         // Navigation
         document.getElementById('dashboardBtn').addEventListener('click', () => this.switchView('dashboard'));
