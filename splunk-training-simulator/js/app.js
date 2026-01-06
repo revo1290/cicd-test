@@ -1,10 +1,17 @@
-// Main application logic for Splunk Training Simulator
+// Main application logic for Splunk Training Simulator - Enterprise Edition
 
 class SplunkSimulator {
     constructor() {
         this.currentView = 'dashboard';
         this.allLogs = [];
         this.currentTimeRange = '1h';
+        this.currentSearchResults = [];
+        this.searchHistory = this.loadSearchHistory();
+
+        // Initialize managers
+        this.sourceFilterManager = new SourceFilterManager();
+        this.savedSearchManager = new SavedSearchManager();
+
         this.init();
     }
 
@@ -12,25 +19,44 @@ class SplunkSimulator {
         // Generate initial data
         this.refreshData();
 
+        // Setup sidebar
+        this.setupSourceFilters();
+        this.setupSavedSearches();
+
         // Setup event listeners
         this.setupEventListeners();
 
         // Initialize dashboard
         this.updateDashboard();
+        this.updateSidebarStats();
     }
 
     setupEventListeners() {
+        // Sidebar toggle (for mobile)
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('open');
+            });
+        }
+
         // Navigation
         document.getElementById('dashboardBtn').addEventListener('click', () => this.switchView('dashboard'));
         document.getElementById('searchBtn').addEventListener('click', () => this.switchView('search'));
         document.getElementById('customDashboardBtn').addEventListener('click', () => this.switchView('customDashboard'));
         document.getElementById('tutorialBtn').addEventListener('click', () => this.switchView('tutorial'));
 
-        // Dashboard
+        // Time range and refresh
         document.getElementById('refreshBtn').addEventListener('click', () => this.refreshData());
         document.getElementById('timeRange').addEventListener('change', (e) => {
             this.currentTimeRange = e.target.value;
             this.refreshData();
+        });
+
+        // Source filter toggle all
+        document.getElementById('filterToggleAll').addEventListener('click', () => {
+            this.sourceFilterManager.toggleAllSources();
+            this.applySourceFilter();
         });
 
         // Search
@@ -41,13 +67,45 @@ class SplunkSimulator {
             }
         });
 
-        // Search view options
+        // Search history
+        document.getElementById('searchHistoryBtn').addEventListener('click', () => {
+            this.toggleSearchHistory();
+        });
+        document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+            this.clearSearchHistory();
+        });
+
+        // Save search button
+        document.getElementById('saveSearchBtn').addEventListener('click', () => {
+            const query = document.getElementById('queryInput').value.trim();
+            if (query) {
+                this.showSaveSearchModal(query);
+            }
+        });
+
+        // Search view switcher
         document.getElementById('tableViewBtn').addEventListener('click', () => this.switchSearchView('table'));
         document.getElementById('rawViewBtn').addEventListener('click', () => this.switchSearchView('raw'));
         document.getElementById('chartViewBtn').addEventListener('click', () => this.switchSearchView('chart'));
 
+        // Export dropdown
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            document.getElementById('exportMenu').style.display =
+                document.getElementById('exportMenu').style.display === 'none' ? 'block' : 'none';
+        });
+        document.getElementById('exportCSV').addEventListener('click', () => this.exportResults('csv'));
+        document.getElementById('exportJSON').addEventListener('click', () => this.exportResults('json'));
+        document.getElementById('exportRaw').addEventListener('click', () => this.exportResults('raw'));
+
+        // Close export menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.export-dropdown')) {
+                document.getElementById('exportMenu').style.display = 'none';
+            }
+        });
+
         // Example queries
-        document.querySelectorAll('.example-btn').forEach(btn => {
+        document.querySelectorAll('.example-chip').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const query = e.target.getAttribute('data-query');
                 document.getElementById('queryInput').value = query;
@@ -56,7 +114,7 @@ class SplunkSimulator {
             });
         });
 
-        // Tutorial try buttons
+        // Tutorial buttons
         document.querySelectorAll('.try-btn, .solution-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const query = e.target.getAttribute('data-query');
@@ -67,15 +125,143 @@ class SplunkSimulator {
         });
 
         // Custom Dashboard
-        document.getElementById('addPanelBtn').addEventListener('click', () => this.showPanelModal());
-        document.getElementById('closeModalBtn').addEventListener('click', () => this.hidePanelModal());
-        document.getElementById('cancelPanelBtn').addEventListener('click', () => this.hidePanelModal());
-        document.getElementById('createPanelBtn').addEventListener('click', () => this.createPanel());
+        document.getElementById('addPanelBtn').addEventListener('click', () => this.showAddPanelModal());
+
+        // Modal close buttons
+        document.querySelectorAll('.modal-close, [data-modal]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modalId = e.target.getAttribute('data-modal');
+                if (modalId) {
+                    document.getElementById(modalId).style.display = 'none';
+                }
+            });
+        });
+
+        // Modal overlay clicks
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.parentElement.style.display = 'none';
+                }
+            });
+        });
+
+        // Save search modal confirm
+        document.getElementById('confirmSaveSearch').addEventListener('click', () => {
+            this.saveSearchFromModal();
+        });
+
+        // Create panel button
+        document.getElementById('createPanelBtn').addEventListener('click', () => {
+            this.createPanel();
+        });
+    }
+
+    setupSourceFilters() {
+        const container = document.getElementById('sourceFilters');
+        const sources = this.sourceFilterManager.availableSources;
+
+        let html = '';
+        sources.forEach(source => {
+            html += `
+                <div class="source-filter-item">
+                    <input type="checkbox" id="filter-${source.id}" value="${source.id}" checked>
+                    <span class="source-icon">${source.icon}</span>
+                    <span class="source-name">${source.name}</span>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        // Add event listeners
+        sources.forEach(source => {
+            document.getElementById(`filter-${source.id}`).addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.sourceFilterManager.selectSource(source.id);
+                } else {
+                    this.sourceFilterManager.deselectSource(source.id);
+                }
+                this.applySourceFilter();
+            });
+        });
+    }
+
+    setupSavedSearches() {
+        this.renderSavedSearches();
+    }
+
+    renderSavedSearches() {
+        const container = document.getElementById('savedSearchesList');
+        const searches = this.savedSearchManager.getAllSearches();
+
+        if (searches.length === 0) {
+            container.innerHTML = '<p class="empty-message">保存された検索がありません</p>';
+            return;
+        }
+
+        let html = '';
+        searches.forEach(search => {
+            html += `
+                <div class="saved-search-item" data-id="${search.id}">
+                    <div class="saved-search-name">${this.escapeHtml(search.name)}</div>
+                    <div class="saved-search-query">${this.escapeHtml(search.query)}</div>
+                    <div class="saved-search-actions">
+                        <button onclick="splunkSimulator.runSavedSearch(${search.id})">実行</button>
+                        <button onclick="splunkSimulator.deleteSavedSearch(${search.id})">削除</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    runSavedSearch(searchId) {
+        const search = this.savedSearchManager.getSearch(searchId);
+        if (search) {
+            document.getElementById('queryInput').value = search.query;
+            this.switchView('search');
+            this.executeSearch();
+            this.savedSearchManager.incrementRunCount(searchId);
+        }
+    }
+
+    deleteSavedSearch(searchId) {
+        if (confirm('この検索を削除しますか？')) {
+            this.savedSearchManager.deleteSearch(searchId);
+            this.renderSavedSearches();
+        }
+    }
+
+    applySourceFilter() {
+        // Re-filter current logs
+        const timeRangeMinutes = dataGenerator.getTimeRangeMinutes(this.currentTimeRange);
+        const allLogs = dataGenerator.generateAllLogs(30, timeRangeMinutes);
+        this.allLogs = this.sourceFilterManager.filterLogs(allLogs);
+
+        queryParser.setData(this.allLogs);
+
+        // Update current view
+        if (this.currentView === 'dashboard') {
+            this.updateDashboard();
+        }
+        this.updateSidebarStats();
+    }
+
+    updateSidebarStats() {
+        const totalLogs = this.allLogs.length;
+        const errorLogs = this.allLogs.filter(log =>
+            log.level === 'ERROR' || (log.status && log.status >= 500)
+        ).length;
+
+        document.getElementById('sidebarTotalLogs').textContent = totalLogs.toLocaleString();
+        document.getElementById('sidebarErrors').textContent = errorLogs.toLocaleString();
     }
 
     switchView(view) {
         // Update navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`${view}Btn`).classList.add('active');
 
         // Update views
@@ -88,20 +274,26 @@ class SplunkSimulator {
         if (view === 'dashboard') {
             this.updateDashboard();
         } else if (view === 'customDashboard') {
-            dashboardBuilder.refreshPanels();
+            if (window.dashboardBuilder) {
+                dashboardBuilder.refreshPanels();
+            }
         }
     }
 
     refreshData() {
         const timeRangeMinutes = dataGenerator.getTimeRangeMinutes(this.currentTimeRange);
-        this.allLogs = dataGenerator.generateAllLogs(50, timeRangeMinutes);
+        const allLogs = dataGenerator.generateAllLogs(30, timeRangeMinutes);
+        this.allLogs = this.sourceFilterManager.filterLogs(allLogs);
+
         queryParser.setData(this.allLogs);
 
         if (this.currentView === 'dashboard') {
             this.updateDashboard();
-        } else if (this.currentView === 'customDashboard') {
+        } else if (this.currentView === 'customDashboard' && window.dashboardBuilder) {
             dashboardBuilder.refreshPanels();
         }
+
+        this.updateSidebarStats();
     }
 
     updateDashboard() {
@@ -113,7 +305,7 @@ class SplunkSimulator {
         const warningEvents = this.allLogs.filter(e =>
             e.level === 'WARN' || e.severity === 'warning' || (e.status && e.status >= 400 && e.status < 500)
         );
-        const securityEvents = this.allLogs.filter(e => e.source === 'security');
+        const securityEvents = this.allLogs.filter(e => e.source === 'firewall' || e.source === 'windows:event');
 
         // Update metrics
         document.getElementById('totalEvents').textContent = totalEvents.toLocaleString();
@@ -268,26 +460,22 @@ class SplunkSimulator {
 
     displayRecentEvents() {
         const container = document.getElementById('recentEvents');
-        const recentLogs = this.allLogs.slice(0, 15);
+        const recentLogs = this.allLogs.slice(0, 10);
 
         if (recentLogs.length === 0) {
-            container.innerHTML = '<div class="no-results">イベントがありません</div>';
+            container.innerHTML = '<div class="empty-state"><p>イベントがありません</p></div>';
             return;
         }
 
         let html = '';
         recentLogs.forEach(log => {
             const time = new Date(log._time).toLocaleString('ja-JP');
-            const level = log.level || log.severity || `Status ${log.status}` || 'INFO';
+            const level = log.level || log.severity || 'INFO';
             const message = log.message || log._raw || '';
-            const source = log.source || 'unknown';
 
             html += `
-                <div class="event-row">
-                    <div class="event-time">${time}</div>
-                    <div class="event-level ${log.level || 'INFO'}">${this.escapeHtml(level)}</div>
-                    <div class="event-source" style="color: #667eea; font-weight: 600;">${this.escapeHtml(source)}</div>
-                    <div class="event-message">${this.escapeHtml(message.substring(0, 150))}</div>
+                <div class="event-item ${level}">
+                    <strong>${time}</strong> [${this.escapeHtml(log.source)}] ${this.escapeHtml(message.substring(0, 100))}
                 </div>
             `;
         });
@@ -303,6 +491,9 @@ class SplunkSimulator {
             return;
         }
 
+        // Add to history
+        this.addToSearchHistory(query);
+
         const result = queryParser.executeQuery(query);
 
         if (result.success) {
@@ -317,7 +508,7 @@ class SplunkSimulator {
         const countSpan = document.getElementById('resultCount');
 
         if (message) {
-            container.innerHTML = `<div class="no-results">${message}</div>`;
+            container.innerHTML = `<div class="empty-state"><p>${message}</p></div>`;
             countSpan.textContent = '';
             return;
         }
@@ -325,11 +516,11 @@ class SplunkSimulator {
         countSpan.textContent = `(${results.length}件)`;
 
         if (results.length === 0) {
-            container.innerHTML = '<div class="no-results">結果が見つかりませんでした</div>';
+            container.innerHTML = '<div class="empty-state"><p>結果が見つかりませんでした</p></div>';
             return;
         }
 
-        // Store results for view switching
+        // Store results
         this.currentSearchResults = results;
 
         // Show table view by default
@@ -414,11 +605,11 @@ class SplunkSimulator {
 
         results.slice(0, 100).forEach(result => {
             html += '<div class="raw-event">';
-            html += `<div style="color: #6a9fb5;">${new Date(result._time).toISOString()}</div>`;
+            html += `<div style="color: #60a5fa;">${new Date(result._time).toISOString()}</div>`;
 
             Object.keys(result).forEach(key => {
                 if (!key.startsWith('_')) {
-                    html += `<div><span style="color: #9cdcfe;">${this.escapeHtml(key)}</span>=<span style="color: #ce9178;">${this.escapeHtml(String(result[key]))}</span></div>`;
+                    html += `<div><span style="color: #93c5fd;">${this.escapeHtml(key)}</span>=<span style="color: #fbbf24;">${this.escapeHtml(String(result[key]))}</span></div>`;
                 }
             });
 
@@ -455,16 +646,158 @@ class SplunkSimulator {
         }
     }
 
-    // Custom Dashboard Modal
-    showPanelModal() {
+    // Export functionality
+    exportResults(format) {
+        if (!this.currentSearchResults || this.currentSearchResults.length === 0) {
+            alert('エクスポートする結果がありません');
+            return;
+        }
+
+        let content, filename, mimeType;
+
+        if (format === 'csv') {
+            content = this.convertToCSV(this.currentSearchResults);
+            filename = `splunk_export_${Date.now()}.csv`;
+            mimeType = 'text/csv';
+        } else if (format === 'json') {
+            content = JSON.stringify(this.currentSearchResults, null, 2);
+            filename = `splunk_export_${Date.now()}.json`;
+            mimeType = 'application/json';
+        } else if (format === 'raw') {
+            content = this.currentSearchResults.map(r => r._raw || JSON.stringify(r)).join('\n');
+            filename = `splunk_export_${Date.now()}.txt`;
+            mimeType = 'text/plain';
+        }
+
+        this.downloadFile(content, filename, mimeType);
+        document.getElementById('exportMenu').style.display = 'none';
+    }
+
+    convertToCSV(data) {
+        if (data.length === 0) return '';
+
+        const headers = Object.keys(data[0]);
+        const csvRows = [];
+
+        // Add header
+        csvRows.push(headers.join(','));
+
+        // Add data
+        data.forEach(row => {
+            const values = headers.map(header => {
+                const value = row[header] !== undefined ? String(row[header]) : '';
+                return `"${value.replace(/"/g, '""')}"`;
+            });
+            csvRows.push(values.join(','));
+        });
+
+        return csvRows.join('\n');
+    }
+
+    downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    // Search history
+    loadSearchHistory() {
+        const history = localStorage.getItem('splunk_search_history');
+        return history ? JSON.parse(history) : [];
+    }
+
+    saveSearchHistory() {
+        localStorage.setItem('splunk_search_history', JSON.stringify(this.searchHistory));
+    }
+
+    addToSearchHistory(query) {
+        // Remove duplicates
+        this.searchHistory = this.searchHistory.filter(q => q !== query);
+        // Add to beginning
+        this.searchHistory.unshift(query);
+        // Keep only last 20
+        this.searchHistory = this.searchHistory.slice(0, 20);
+        this.saveSearchHistory();
+    }
+
+    toggleSearchHistory() {
+        const dropdown = document.getElementById('searchHistoryDropdown');
+        const isVisible = dropdown.style.display !== 'none';
+
+        if (isVisible) {
+            dropdown.style.display = 'none';
+        } else {
+            this.renderSearchHistory();
+            dropdown.style.display = 'block';
+        }
+    }
+
+    renderSearchHistory() {
+        const container = document.getElementById('searchHistoryList');
+
+        if (this.searchHistory.length === 0) {
+            container.innerHTML = '<div class="dropdown-item" style="text-align: center; color: #999;">履歴がありません</div>';
+            return;
+        }
+
+        let html = '';
+        this.searchHistory.forEach(query => {
+            html += `<div class="dropdown-item" onclick="splunkSimulator.useHistoryQuery('${this.escapeHtml(query).replace(/'/g, '&#39;')}')">${this.escapeHtml(query)}</div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    useHistoryQuery(query) {
+        document.getElementById('queryInput').value = query;
+        document.getElementById('searchHistoryDropdown').style.display = 'none';
+        this.executeSearch();
+    }
+
+    clearSearchHistory() {
+        if (confirm('検索履歴を削除しますか？')) {
+            this.searchHistory = [];
+            this.saveSearchHistory();
+            document.getElementById('searchHistoryDropdown').style.display = 'none';
+        }
+    }
+
+    // Save search modal
+    showSaveSearchModal(query) {
+        document.getElementById('saveSearchModal').style.display = 'flex';
+        document.getElementById('saveSearchQuery').textContent = query;
+        document.getElementById('saveSearchName').value = '';
+        document.getElementById('saveSearchDesc').value = '';
+        document.getElementById('saveSearchName').focus();
+    }
+
+    saveSearchFromModal() {
+        const name = document.getElementById('saveSearchName').value.trim();
+        const description = document.getElementById('saveSearchDesc').value.trim();
+        const query = document.getElementById('saveSearchQuery').textContent;
+
+        if (!name) {
+            alert('名前を入力してください');
+            return;
+        }
+
+        this.savedSearchManager.saveSearch(name, query, description);
+        this.renderSavedSearches();
+        document.getElementById('saveSearchModal').style.display = 'none';
+    }
+
+    // Custom dashboard
+    showAddPanelModal() {
         document.getElementById('panelModal').style.display = 'flex';
         document.getElementById('panelTitle').value = '';
         document.getElementById('panelQuery').value = '';
         document.getElementById('panelVizType').value = 'metric';
-    }
-
-    hidePanelModal() {
-        document.getElementById('panelModal').style.display = 'none';
     }
 
     createPanel() {
@@ -477,8 +810,11 @@ class SplunkSimulator {
             return;
         }
 
-        dashboardBuilder.addPanel(title, query, vizType);
-        this.hidePanelModal();
+        if (window.dashboardBuilder) {
+            dashboardBuilder.addPanel(title, query, vizType);
+        }
+
+        document.getElementById('panelModal').style.display = 'none';
     }
 
     escapeHtml(text) {
