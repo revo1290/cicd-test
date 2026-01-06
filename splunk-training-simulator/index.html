@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splunk Training Simulator - 無料トレーニング</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <h1>🔍 Splunk Training Simulator</h1>
+                <p class="subtitle">運用監視ツールの学習環境</p>
+            </div>
+            <nav>
+                <button id="dashboardBtn" class="nav-btn active">ダッシュボード</button>
+                <button id="searchBtn" class="nav-btn">検索</button>
+                <button id="tutorialBtn" class="nav-btn">チュートリアル</button>
+            </nav>
+        </header>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="view active">
+            <div class="dashboard-header">
+                <h2>システム監視ダッシュボード</h2>
+                <div class="time-range">
+                    <select id="timeRange">
+                        <option value="15m">過去15分</option>
+                        <option value="1h" selected>過去1時間</option>
+                        <option value="24h">過去24時間</option>
+                        <option value="7d">過去7日</option>
+                    </select>
+                    <button id="refreshBtn">🔄 更新</button>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>総イベント数</h3>
+                    <div class="metric" id="totalEvents">0</div>
+                </div>
+                <div class="card">
+                    <h3>エラー数</h3>
+                    <div class="metric error" id="errorCount">0</div>
+                </div>
+                <div class="card">
+                    <h3>警告数</h3>
+                    <div class="metric warning" id="warningCount">0</div>
+                </div>
+                <div class="card">
+                    <h3>アクティブユーザー</h3>
+                    <div class="metric" id="activeUsers">0</div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card chart-card">
+                    <h3>時系列ログ統計</h3>
+                    <canvas id="timeSeriesChart"></canvas>
+                </div>
+                <div class="card chart-card">
+                    <h3>ログレベル分布</h3>
+                    <canvas id="levelChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>最新のイベント</h3>
+                <div id="recentEvents" class="events-table"></div>
+            </div>
+        </div>
+
+        <!-- Search View -->
+        <div id="searchView" class="view">
+            <div class="search-header">
+                <h2>ログ検索</h2>
+            </div>
+
+            <div class="search-box">
+                <div class="query-input-container">
+                    <input type="text"
+                           id="queryInput"
+                           placeholder="SPLクエリを入力してください (例: source=web_access status=500 | stats count by host)"
+                           autocomplete="off">
+                    <button id="searchButton" class="primary-btn">検索</button>
+                </div>
+                <div class="query-examples">
+                    <span>クエリ例:</span>
+                    <button class="example-btn" data-query="source=web_access">全てのWebアクセスログ</button>
+                    <button class="example-btn" data-query="source=web_access status>=400">エラーステータス</button>
+                    <button class="example-btn" data-query="source=web_access | stats count by status">ステータス別集計</button>
+                    <button class="example-btn" data-query="source=app_log level=ERROR">アプリケーションエラー</button>
+                </div>
+            </div>
+
+            <div class="search-results">
+                <div class="results-header">
+                    <h3>検索結果 <span id="resultCount"></span></h3>
+                    <div class="view-options">
+                        <button id="tableViewBtn" class="view-btn active">テーブル</button>
+                        <button id="rawViewBtn" class="view-btn">Raw</button>
+                        <button id="chartViewBtn" class="view-btn">チャート</button>
+                    </div>
+                </div>
+
+                <div id="resultsContainer">
+                    <div class="no-results">検索を実行してください</div>
+                </div>
+
+                <div id="chartContainer" style="display: none;">
+                    <canvas id="searchChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tutorial View -->
+        <div id="tutorialView" class="view">
+            <div class="tutorial-header">
+                <h2>チュートリアル</h2>
+            </div>
+
+            <div class="tutorial-content">
+                <div class="tutorial-section">
+                    <h3>🎯 Splunkとは？</h3>
+                    <p>Splunkは、ログデータの収集、分析、可視化を行う運用監視ツールです。このシミュレーターでは、Splunkの基本的な機能を無料で学習できます。</p>
+                </div>
+
+                <div class="tutorial-section">
+                    <h3>📚 基本的なSPL（Search Processing Language）</h3>
+
+                    <div class="lesson">
+                        <h4>1. 基本的な検索</h4>
+                        <div class="code-block">source=web_access</div>
+                        <p>特定のソースからすべてのログを取得します。</p>
+                        <button class="try-btn" data-query="source=web_access">試してみる</button>
+                    </div>
+
+                    <div class="lesson">
+                        <h4>2. フィールドでフィルタリング</h4>
+                        <div class="code-block">source=web_access status=500</div>
+                        <p>特定のフィールド値でログをフィルタリングします。</p>
+                        <button class="try-btn" data-query="source=web_access status=500">試してみる</button>
+                    </div>
+
+                    <div class="lesson">
+                        <h4>3. 比較演算子</h4>
+                        <div class="code-block">source=web_access status>=400</div>
+                        <p>数値フィールドで比較演算子を使用します。</p>
+                        <button class="try-btn" data-query="source=web_access status>=400">試してみる</button>
+                    </div>
+
+                    <div class="lesson">
+                        <h4>4. 統計コマンド (stats)</h4>
+                        <div class="code-block">source=web_access | stats count by status</div>
+                        <p>フィールドごとにイベント数を集計します。</p>
+                        <button class="try-btn" data-query="source=web_access | stats count by status">試してみる</button>
+                    </div>
+
+                    <div class="lesson">
+                        <h4>5. 複数フィールドでの集計</h4>
+                        <div class="code-block">source=web_access | stats count, avg(response_time) by host</div>
+                        <p>複数の統計値を同時に計算します。</p>
+                        <button class="try-btn" data-query="source=web_access | stats count, avg(response_time) by host">試してみる</button>
+                    </div>
+
+                    <div class="lesson">
+                        <h4>6. ソートコマンド</h4>
+                        <div class="code-block">source=web_access | stats count by status | sort -count</div>
+                        <p>結果を降順でソートします（-は降順、なしは昇順）。</p>
+                        <button class="try-btn" data-query="source=web_access | stats count by status | sort -count">試してみる</button>
+                    </div>
+                </div>
+
+                <div class="tutorial-section">
+                    <h3>💡 練習問題</h3>
+
+                    <div class="exercise">
+                        <h4>問題1: エラーログの分析</h4>
+                        <p>アプリケーションログからERRORレベルのログを検索してください。</p>
+                        <button class="solution-btn" data-query="source=app_log level=ERROR">解答を見る</button>
+                    </div>
+
+                    <div class="exercise">
+                        <h4>問題2: ホスト別のアクセス数</h4>
+                        <p>Webアクセスログをホスト別に集計し、アクセス数の多い順に並べてください。</p>
+                        <button class="solution-btn" data-query="source=web_access | stats count by host | sort -count">解答を見る</button>
+                    </div>
+
+                    <div class="exercise">
+                        <h4>問題3: 遅いリクエストの検出</h4>
+                        <p>レスポンスタイムが500ms以上のWebアクセスログを検索してください。</p>
+                        <button class="solution-btn" data-query="source=web_access response_time>=500">解答を見る</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/data-generator.js"></script>
+    <script src="js/query-parser.js"></script>
+    <script src="js/visualizations.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
