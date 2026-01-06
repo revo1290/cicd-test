@@ -3,157 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Splunk Training Simulator - 運用監視トレーニング</title>
+    <title>Splunk Training Simulator - Enterprise Edition</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header>
-            <div class="logo">
-                <h1>🔍 Splunk Training Simulator</h1>
-                <p class="subtitle">実践的な運用監視トレーニングプラットフォーム</p>
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h2>🔍 Splunk Simulator</h2>
+            <button id="sidebarToggle" class="sidebar-toggle">☰</button>
+        </div>
+
+        <!-- Source Filters -->
+        <div class="sidebar-section">
+            <h3>ログソース <button id="filterToggleAll" class="filter-toggle">全選択</button></h3>
+            <div id="sourceFilters" class="source-filters"></div>
+        </div>
+
+        <!-- Saved Searches -->
+        <div class="sidebar-section">
+            <h3>保存された検索</h3>
+            <div id="savedSearchesList" class="saved-searches-list">
+                <p class="empty-message">保存された検索がありません</p>
             </div>
-            <nav>
-                <button id="dashboardBtn" class="nav-btn active">ダッシュボード</button>
-                <button id="searchBtn" class="nav-btn">検索</button>
-                <button id="customDashboardBtn" class="nav-btn">カスタムダッシュボード</button>
-                <button id="tutorialBtn" class="nav-btn">チュートリアル</button>
-            </nav>
-        </header>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="sidebar-section">
+            <h3>統計</h3>
+            <div class="quick-stats">
+                <div class="stat-item">
+                    <span class="stat-label">総ログ:</span>
+                    <span class="stat-value" id="sidebarTotalLogs">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">エラー:</span>
+                    <span class="stat-value error" id="sidebarErrors">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="main-content">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-links">
+                <button id="dashboardBtn" class="nav-link active">📊 ダッシュボード</button>
+                <button id="searchBtn" class="nav-link">🔍 検索</button>
+                <button id="customDashboardBtn" class="nav-link">📈 カスタム</button>
+                <button id="tutorialBtn" class="nav-link">🎓 チュートリアル</button>
+            </div>
+            <div class="nav-actions">
+                <select id="timeRange" class="time-select">
+                    <option value="5m">5分</option>
+                    <option value="15m">15分</option>
+                    <option value="1h" selected>1時間</option>
+                    <option value="4h">4時間</option>
+                    <option value="24h">24時間</option>
+                    <option value="7d">7日</option>
+                </select>
+                <button id="refreshBtn" class="btn-primary">🔄 更新</button>
+            </div>
+        </nav>
 
         <!-- Dashboard View -->
         <div id="dashboardView" class="view active">
-            <div class="dashboard-header">
-                <h2>システム監視ダッシュボード</h2>
-                <div class="time-range">
-                    <select id="timeRange">
-                        <option value="15m">過去15分</option>
-                        <option value="1h" selected>過去1時間</option>
-                        <option value="24h">過去24時間</option>
-                        <option value="7d">過去7日</option>
-                    </select>
-                    <button id="refreshBtn">🔄 更新</button>
+            <div class="view-header">
+                <h1>システム監視ダッシュボード</h1>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon">📝</div>
+                    <div class="metric-info">
+                        <h3>総イベント数</h3>
+                        <div class="metric-value" id="totalEvents">0</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon error">❌</div>
+                    <div class="metric-info">
+                        <h3>エラー数</h3>
+                        <div class="metric-value error" id="errorCount">0</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon warning">⚠️</div>
+                    <div class="metric-info">
+                        <h3>警告数</h3>
+                        <div class="metric-value warning" id="warningCount">0</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">🔐</div>
+                    <div class="metric-info">
+                        <h3>セキュリティ</h3>
+                        <div class="metric-value" id="securityEvents">0</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="dashboard-grid">
-                <div class="card">
-                    <h3>総イベント数</h3>
-                    <div class="metric" id="totalEvents">0</div>
-                </div>
-                <div class="card">
-                    <h3>エラー数</h3>
-                    <div class="metric error" id="errorCount">0</div>
-                </div>
-                <div class="card">
-                    <h3>警告数</h3>
-                    <div class="metric warning" id="warningCount">0</div>
-                </div>
-                <div class="card">
-                    <h3>セキュリティイベント</h3>
-                    <div class="metric" id="securityEvents">0</div>
-                </div>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="card chart-card">
+            <div class="charts-grid">
+                <div class="chart-container">
                     <h3>時系列ログ統計</h3>
                     <canvas id="timeSeriesChart"></canvas>
                 </div>
-                <div class="card chart-card">
+                <div class="chart-container">
                     <h3>ソース別分布</h3>
                     <canvas id="sourceChart"></canvas>
                 </div>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="card chart-card">
-                    <h3>HTTPステータス分布</h3>
+                <div class="chart-container">
+                    <h3>HTTPステータス</h3>
                     <canvas id="statusChart"></canvas>
                 </div>
-                <div class="card chart-card">
+                <div class="chart-container">
                     <h3>トップ10エンドポイント</h3>
                     <canvas id="endpointChart"></canvas>
                 </div>
             </div>
 
-            <div class="card">
+            <div class="recent-events">
                 <h3>最新のイベント</h3>
-                <div id="recentEvents" class="events-table"></div>
+                <div id="recentEvents" class="events-list"></div>
             </div>
         </div>
 
         <!-- Search View -->
         <div id="searchView" class="view">
-            <div class="search-header">
-                <h2>ログ検索</h2>
+            <div class="view-header">
+                <h1>ログ検索</h1>
             </div>
 
-            <div class="search-box">
-                <div class="query-input-container">
-                    <input type="text"
-                           id="queryInput"
-                           placeholder="SPLクエリを入力してください (例: source=apache_access status>=400 | stats count by clientip)"
-                           autocomplete="off">
-                    <button id="searchButton" class="primary-btn">検索</button>
+            <div class="search-container">
+                <div class="search-input-group">
+                    <input type="text" id="queryInput" class="search-input" placeholder="SPL クエリを入力... (例: source=kubernetes level=ERROR)">
+                    <button id="searchHistoryBtn" class="btn-icon" title="検索履歴">📜</button>
+                    <button id="saveSearchBtn" class="btn-icon" title="検索を保存">💾</button>
+                    <button id="searchButton" class="btn-primary">🔍 検索</button>
                 </div>
-                <div class="query-categories">
-                    <h4>カテゴリ別クエリ例:</h4>
 
-                    <div class="category">
-                        <h5>📊 Apache/Nginx ログ分析</h5>
-                        <button class="example-btn" data-query="source=apache_access status>=400">Apacheエラーログ</button>
-                        <button class="example-btn" data-query="source=nginx_access | stats avg(request_time) by uri">Nginxレスポンスタイム分析</button>
-                        <button class="example-btn" data-query="source=apache_access | stats count by clientip | sort -count | head 10">トップ10アクセス元IP</button>
+                <!-- Search History Dropdown -->
+                <div id="searchHistoryDropdown" class="dropdown" style="display: none;">
+                    <div class="dropdown-header">
+                        <h4>検索履歴</h4>
+                        <button id="clearHistoryBtn" class="btn-text">クリア</button>
                     </div>
+                    <div id="searchHistoryList" class="dropdown-list"></div>
+                </div>
 
-                    <div class="category">
-                        <h5>🔐 セキュリティ分析</h5>
-                        <button class="example-btn" data-query="source=security severity=high">高セキュリティアラート</button>
-                        <button class="example-btn" data-query="source=security event_type=Failed*">ログイン失敗</button>
-                        <button class="example-btn" data-query="source=syslog process=sshd">SSH接続ログ</button>
-                    </div>
-
-                    <div class="category">
-                        <h5>💾 データベース分析</h5>
-                        <button class="example-btn" data-query="source=database duration_ms>=100">遅いクエリ検出</button>
-                        <button class="example-btn" data-query="source=database | stats avg(duration_ms) by query_type">クエリタイプ別平均実行時間</button>
-                        <button class="example-btn" data-query="source=database database=production">本番DB操作</button>
-                    </div>
-
-                    <div class="category">
-                        <h5>🌐 API Gateway</h5>
-                        <button class="example-btn" data-query="source=api_gateway status>=500">APIサーバーエラー</button>
-                        <button class="example-btn" data-query="source=api_gateway | stats count, avg(latency_ms) by endpoint">エンドポイント別統計</button>
-                        <button class="example-btn" data-query="source=api_gateway latency_ms>=1000">遅延APIコール</button>
-                    </div>
-
-                    <div class="category">
-                        <h5>📝 JSON ログ</h5>
-                        <button class="example-btn" data-query="source=json_logs level=ERROR">JSONエラーログ</button>
-                        <button class="example-btn" data-query="source=json_logs | stats count by service, status">サービス別ステータス</button>
-                        <button class="example-btn" data-query="source=json_logs | stats count by country | sort -count">国別アクセス数</button>
-                    </div>
+                <!-- Quick Examples -->
+                <div class="quick-examples">
+                    <span class="examples-label">クイック例:</span>
+                    <button class="example-chip" data-query="source=kubernetes level=ERROR">K8s エラー</button>
+                    <button class="example-chip" data-query="source=docker">Docker</button>
+                    <button class="example-chip" data-query="source=aws:cloudwatch">AWS</button>
+                    <button class="example-chip" data-query="source=nginx status>=500">Nginx 5xx</button>
+                    <button class="example-chip" data-query="source=mongodb duration_ms>=100">遅いDB</button>
                 </div>
             </div>
 
-            <div class="search-results">
-                <div class="results-header">
-                    <h3>検索結果 <span id="resultCount"></span></h3>
-                    <div class="view-options">
-                        <button id="tableViewBtn" class="view-btn active">テーブル</button>
-                        <button id="rawViewBtn" class="view-btn">Raw</button>
-                        <button id="chartViewBtn" class="view-btn">チャート</button>
+            <div class="search-results-container">
+                <div class="results-toolbar">
+                    <div class="results-info">
+                        <h3>検索結果 <span id="resultCount" class="result-count"></span></h3>
+                    </div>
+                    <div class="results-actions">
+                        <div class="view-switcher">
+                            <button id="tableViewBtn" class="view-btn active" title="テーブル">📋</button>
+                            <button id="rawViewBtn" class="view-btn" title="Raw">📄</button>
+                            <button id="chartViewBtn" class="view-btn" title="チャート">📊</button>
+                        </div>
+                        <div class="export-dropdown">
+                            <button id="exportBtn" class="btn-secondary">📤 エクスポート ▼</button>
+                            <div id="exportMenu" class="export-menu" style="display: none;">
+                                <button id="exportCSV" class="export-option">CSV形式</button>
+                                <button id="exportJSON" class="export-option">JSON形式</button>
+                                <button id="exportRaw" class="export-option">Raw形式</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div id="resultsContainer">
-                    <div class="no-results">検索を実行してください</div>
+                <div id="resultsContainer" class="results-content">
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <p>検索を実行してください</p>
+                    </div>
                 </div>
 
-                <div id="chartContainer" style="display: none;">
+                <div id="chartContainer" class="chart-results" style="display: none;">
                     <canvas id="searchChart"></canvas>
                 </div>
             </div>
@@ -161,181 +201,150 @@
 
         <!-- Custom Dashboard View -->
         <div id="customDashboardView" class="view">
-            <div class="custom-dashboard-header">
-                <h2>カスタムダッシュボード作成</h2>
-                <button id="addPanelBtn" class="primary-btn">+ パネルを追加</button>
+            <div class="view-header">
+                <h1>カスタムダッシュボード</h1>
+                <button id="addPanelBtn" class="btn-primary">+ パネルを追加</button>
             </div>
 
-            <div id="customDashboardPanels" class="custom-dashboard-grid">
-                <div class="empty-dashboard">
-                    <p>「+ パネルを追加」をクリックして、独自のダッシュボードを作成しましょう</p>
-                </div>
-            </div>
-
-            <!-- Panel Creation Modal -->
-            <div id="panelModal" class="modal" style="display: none;">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>新しいパネルを作成</h3>
-                        <button id="closeModalBtn" class="close-btn">×</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>パネルタイトル</label>
-                            <input type="text" id="panelTitle" placeholder="例: エラーログ統計">
-                        </div>
-                        <div class="form-group">
-                            <label>SPLクエリ</label>
-                            <textarea id="panelQuery" rows="4" placeholder="例: source=apache_access status>=400 | stats count by status"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>ビジュアライゼーションタイプ</label>
-                            <select id="panelVizType">
-                                <option value="metric">メトリクス（数値）</option>
-                                <option value="table">テーブル</option>
-                                <option value="bar">棒グラフ</option>
-                                <option value="line">折れ線グラフ</option>
-                                <option value="pie">円グラフ</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button id="cancelPanelBtn" class="secondary-btn">キャンセル</button>
-                        <button id="createPanelBtn" class="primary-btn">作成</button>
-                    </div>
+            <div id="customDashboardPanels" class="custom-panels-grid">
+                <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <p>「+ パネルを追加」をクリックして独自のダッシュボードを作成</p>
                 </div>
             </div>
         </div>
 
         <!-- Tutorial View -->
         <div id="tutorialView" class="view">
-            <div class="tutorial-header">
-                <h2>チュートリアル</h2>
+            <div class="view-header">
+                <h1>Splunk トレーニング</h1>
             </div>
 
-            <div class="tutorial-content">
-                <div class="tutorial-section">
-                    <h3>🎯 Splunk Training Simulatorへようこそ</h3>
-                    <p>このシミュレーターでは、実際の運用環境で使用される様々なログフォーマットを使用して、Splunkの基本的な機能を学習できます。</p>
+            <div class="tutorial-grid">
+                <div class="tutorial-card">
+                    <h2>🎯 はじめに</h2>
+                    <p>15種類以上のログフォーマットで実践的なログ分析を学習できます。</p>
                     <ul>
-                        <li><strong>Apache/Nginx</strong>: Webサーバーアクセスログ</li>
-                        <li><strong>Syslog</strong>: Linuxシステムログ</li>
-                        <li><strong>JSON</strong>: 構造化ログデータ</li>
-                        <li><strong>Database</strong>: データベースクエリログ</li>
-                        <li><strong>Security</strong>: セキュリティイベント</li>
-                        <li><strong>API Gateway</strong>: API呼び出しログ</li>
+                        <li>Kubernetes & Docker コンテナログ</li>
+                        <li>AWS & Azure クラウドログ</li>
+                        <li>Redis, MongoDB, Elasticsearch</li>
+                        <li>Nginx, Apache, Firewall</li>
+                        <li>Windows Event, Kafka, Prometheus</li>
                     </ul>
                 </div>
 
-                <div class="tutorial-section">
-                    <h3>📚 基本的なSPL（Search Processing Language）</h3>
-
+                <div class="tutorial-card">
+                    <h2>📚 基本SPLコマンド</h2>
                     <div class="lesson">
-                        <h4>1. ソースの指定</h4>
-                        <div class="code-block">source=apache_access</div>
-                        <p>特定のログソースからすべてのデータを取得します。</p>
-                        <button class="try-btn" data-query="source=apache_access">試してみる</button>
+                        <h3>1. ソース検索</h3>
+                        <code>source=kubernetes</code>
+                        <button class="try-btn" data-query="source=kubernetes">試す</button>
                     </div>
-
                     <div class="lesson">
-                        <h4>2. フィールドでフィルタリング</h4>
-                        <div class="code-block">source=apache_access status=500</div>
-                        <p>特定のフィールド値でログをフィルタリングします。</p>
-                        <button class="try-btn" data-query="source=apache_access status=500">試してみる</button>
+                        <h3>2. フィールドフィルター</h3>
+                        <code>source=docker level=ERROR</code>
+                        <button class="try-btn" data-query="source=docker level=ERROR">試す</button>
                     </div>
-
                     <div class="lesson">
-                        <h4>3. 比較演算子の使用</h4>
-                        <div class="code-block">source=nginx_access request_time>=0.5</div>
-                        <p>数値フィールドに対して比較演算子を使用できます。</p>
-                        <button class="try-btn" data-query="source=nginx_access request_time>=0.5">試してみる</button>
-                    </div>
-
-                    <div class="lesson">
-                        <h4>4. 統計コマンド - count</h4>
-                        <div class="code-block">source=security | stats count by severity</div>
-                        <p>フィールドごとにイベント数を集計します。</p>
-                        <button class="try-btn" data-query="source=security | stats count by severity">試してみる</button>
-                    </div>
-
-                    <div class="lesson">
-                        <h4>5. 統計コマンド - avg</h4>
-                        <div class="code-block">source=database | stats avg(duration_ms) by query_type</div>
-                        <p>数値フィールドの平均値を計算します。</p>
-                        <button class="try-btn" data-query="source=database | stats avg(duration_ms) by query_type">試してみる</button>
-                    </div>
-
-                    <div class="lesson">
-                        <h4>6. 複数の統計関数</h4>
-                        <div class="code-block">source=api_gateway | stats count, avg(latency_ms), max(latency_ms) by endpoint</div>
-                        <p>複数の統計値を同時に計算できます。</p>
-                        <button class="try-btn" data-query="source=api_gateway | stats count, avg(latency_ms), max(latency_ms) by endpoint">試してみる</button>
-                    </div>
-
-                    <div class="lesson">
-                        <h4>7. ソート</h4>
-                        <div class="code-block">source=apache_access | stats count by clientip | sort -count</div>
-                        <p>結果を降順（-）または昇順でソートします。</p>
-                        <button class="try-btn" data-query="source=apache_access | stats count by clientip | sort -count">試してみる</button>
-                    </div>
-
-                    <div class="lesson">
-                        <h4>8. head コマンド</h4>
-                        <div class="code-block">source=json_logs | stats count by country | sort -count | head 5</div>
-                        <p>結果の最初のN件のみを表示します。</p>
-                        <button class="try-btn" data-query="source=json_logs | stats count by country | sort -count | head 5">試してみる</button>
+                        <h3>3. 統計集計</h3>
+                        <code>source=nginx | stats count by status</code>
+                        <button class="try-btn" data-query="source=nginx | stats count by status">試す</button>
                     </div>
                 </div>
 
-                <div class="tutorial-section">
-                    <h3>💡 実践的な練習問題</h3>
-
+                <div class="tutorial-card">
+                    <h2>💡 実践例</h2>
                     <div class="exercise">
-                        <h4>問題1: 高レイテンシーAPIの特定</h4>
-                        <p>API Gatewayログから、レイテンシが1000ms以上のエンドポイントを見つけ、エンドポイント別に集計してください。</p>
-                        <button class="solution-btn" data-query="source=api_gateway latency_ms>=1000 | stats count by endpoint | sort -count">解答を見る</button>
+                        <h3>K8sエラー分析</h3>
+                        <p>Kubernetesのエラーログをポッド別に集計</p>
+                        <button class="solution-btn" data-query="source=kubernetes level=ERROR | stats count by pod">解答</button>
                     </div>
-
                     <div class="exercise">
-                        <h4>問題2: セキュリティ脅威の分析</h4>
-                        <p>セキュリティログから、深刻度が「high」のイベントを抽出し、イベントタイプ別に集計してください。</p>
-                        <button class="solution-btn" data-query="source=security severity=high | stats count by event_type | sort -count">解答を見る</button>
+                        <h3>AWS分析</h3>
+                        <p>AWSサービス別にログを集計</p>
+                        <button class="solution-btn" data-query="source=aws:cloudwatch | stats count by aws_service">解答</button>
                     </div>
-
                     <div class="exercise">
-                        <h4>問題3: データベースパフォーマンス分析</h4>
-                        <p>データベースログから、クエリタイプ別の平均実行時間を計算し、遅い順に並べてください。</p>
-                        <button class="solution-btn" data-query="source=database | stats avg(duration_ms) by query_type | sort -avg(duration_ms)">解答を見る</button>
+                        <h3>遅いDB検出</h3>
+                        <p>MongoDBの遅いクエリを検出</p>
+                        <button class="solution-btn" data-query="source=mongodb duration_ms>=100 | stats avg(duration_ms) by operation">解答</button>
                     </div>
-
-                    <div class="exercise">
-                        <h4>問題4: 地理的アクセス分析</h4>
-                        <p>JSONログから、国別のアクセス数を集計し、トップ5を表示してください。</p>
-                        <button class="solution-btn" data-query="source=json_logs | stats count by country | sort -count | head 5">解答を見る</button>
-                    </div>
-
-                    <div class="exercise">
-                        <h4>問題5: Webサーバーエラー分析</h4>
-                        <p>Apacheログから、4xx/5xxエラーのステータスコード別件数を集計してください。</p>
-                        <button class="solution-btn" data-query="source=apache_access status>=400 | stats count by status | sort -count">解答を見る</button>
-                    </div>
-                </div>
-
-                <div class="tutorial-section">
-                    <h3>🚀 次のステップ</h3>
-                    <ul>
-                        <li>カスタムダッシュボードタブで独自のダッシュボードを作成してみましょう</li>
-                        <li>複数のソースを組み合わせた分析を試してみましょう</li>
-                        <li>より複雑なSPLクエリを作成してデータの深い洞察を得ましょう</li>
-                    </ul>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modals -->
+    <!-- Save Search Modal -->
+    <div id="saveSearchModal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2>検索を保存</h2>
+                <button class="modal-close" data-modal="saveSearchModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>名前 *</label>
+                    <input type="text" id="saveSearchName" placeholder="例: K8s エラーログ">
+                </div>
+                <div class="form-group">
+                    <label>説明</label>
+                    <textarea id="saveSearchDesc" rows="3" placeholder="この検索の説明..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>クエリ</label>
+                    <div class="query-display" id="saveSearchQuery"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-modal="saveSearchModal">キャンセル</button>
+                <button id="confirmSaveSearch" class="btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Panel Modal -->
+    <div id="panelModal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2>パネルを作成</h2>
+                <button class="modal-close" data-modal="panelModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>タイトル *</label>
+                    <input type="text" id="panelTitle" placeholder="例: エラーログ統計">
+                </div>
+                <div class="form-group">
+                    <label>SPLクエリ *</label>
+                    <textarea id="panelQuery" rows="4" placeholder="例: source=kubernetes level=ERROR | stats count by namespace"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>ビジュアライゼーション</label>
+                    <select id="panelVizType">
+                        <option value="metric">メトリクス（数値）</option>
+                        <option value="table">テーブル</option>
+                        <option value="bar">棒グラフ</option>
+                        <option value="line">折れ線グラフ</option>
+                        <option value="pie">円グラフ</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" data-modal="panelModal">キャンセル</button>
+                <button id="createPanelBtn" class="btn-primary">作成</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="js/data-generator.js"></script>
     <script src="js/query-parser.js"></script>
     <script src="js/visualizations.js"></script>
+    <script src="js/saved-searches.js"></script>
+    <script src="js/source-filter.js"></script>
     <script src="js/dashboard-builder.js"></script>
     <script src="js/app.js"></script>
 </body>
