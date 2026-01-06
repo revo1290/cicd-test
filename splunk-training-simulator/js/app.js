@@ -23,6 +23,7 @@ class SplunkSimulator {
         // Navigation
         document.getElementById('dashboardBtn').addEventListener('click', () => this.switchView('dashboard'));
         document.getElementById('searchBtn').addEventListener('click', () => this.switchView('search'));
+        document.getElementById('customDashboardBtn').addEventListener('click', () => this.switchView('customDashboard'));
         document.getElementById('tutorialBtn').addEventListener('click', () => this.switchView('tutorial'));
 
         // Dashboard
@@ -50,6 +51,7 @@ class SplunkSimulator {
             btn.addEventListener('click', (e) => {
                 const query = e.target.getAttribute('data-query');
                 document.getElementById('queryInput').value = query;
+                this.switchView('search');
                 this.executeSearch();
             });
         });
@@ -63,6 +65,12 @@ class SplunkSimulator {
                 this.executeSearch();
             });
         });
+
+        // Custom Dashboard
+        document.getElementById('addPanelBtn').addEventListener('click', () => this.showPanelModal());
+        document.getElementById('closeModalBtn').addEventListener('click', () => this.hidePanelModal());
+        document.getElementById('cancelPanelBtn').addEventListener('click', () => this.hidePanelModal());
+        document.getElementById('createPanelBtn').addEventListener('click', () => this.createPanel());
     }
 
     switchView(view) {
@@ -79,16 +87,20 @@ class SplunkSimulator {
         // Refresh view-specific data
         if (view === 'dashboard') {
             this.updateDashboard();
+        } else if (view === 'customDashboard') {
+            dashboardBuilder.refreshPanels();
         }
     }
 
     refreshData() {
         const timeRangeMinutes = dataGenerator.getTimeRangeMinutes(this.currentTimeRange);
-        this.allLogs = dataGenerator.generateAllLogs(300, 200, timeRangeMinutes);
+        this.allLogs = dataGenerator.generateAllLogs(50, timeRangeMinutes);
         queryParser.setData(this.allLogs);
 
         if (this.currentView === 'dashboard') {
             this.updateDashboard();
+        } else if (this.currentView === 'customDashboard') {
+            dashboardBuilder.refreshPanels();
         }
     }
 
@@ -96,30 +108,167 @@ class SplunkSimulator {
         // Calculate metrics
         const totalEvents = this.allLogs.length;
         const errorEvents = this.allLogs.filter(e =>
-            e.level === 'ERROR' || (e.status && e.status >= 500)
+            e.level === 'ERROR' || (e.status && e.status >= 500) || e.severity === 'err' || e.severity === 'crit'
         );
         const warningEvents = this.allLogs.filter(e =>
-            e.level === 'WARN' || (e.status && e.status >= 400 && e.status < 500)
+            e.level === 'WARN' || e.severity === 'warning' || (e.status && e.status >= 400 && e.status < 500)
         );
-        const uniqueUsers = new Set(this.allLogs.filter(e => e.user).map(e => e.user));
+        const securityEvents = this.allLogs.filter(e => e.source === 'security');
 
         // Update metrics
         document.getElementById('totalEvents').textContent = totalEvents.toLocaleString();
         document.getElementById('errorCount').textContent = errorEvents.length.toLocaleString();
         document.getElementById('warningCount').textContent = warningEvents.length.toLocaleString();
-        document.getElementById('activeUsers').textContent = uniqueUsers.size.toLocaleString();
+        document.getElementById('securityEvents').textContent = securityEvents.length.toLocaleString();
 
         // Update charts
         visualizations.createTimeSeriesChart('timeSeriesChart', this.allLogs);
-        visualizations.createLogLevelChart('levelChart', this.allLogs);
+        this.createSourceChart();
+        this.createStatusChart();
+        this.createEndpointChart();
 
         // Update recent events
         this.displayRecentEvents();
     }
 
+    createSourceChart() {
+        const counts = {};
+        this.allLogs.forEach(log => {
+            const source = log.source || 'unknown';
+            counts[source] = (counts[source] || 0) + 1;
+        });
+
+        visualizations.destroyChart('sourceChart');
+        const ctx = document.getElementById('sourceChart');
+        if (!ctx) return;
+
+        const labels = Object.keys(counts);
+        const data = Object.values(counts);
+        const colors = visualizations.getColorsForLabels(labels);
+
+        visualizations.charts['sourceChart'] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'right'
+                    }
+                }
+            }
+        });
+    }
+
+    createStatusChart() {
+        const statusLogs = this.allLogs.filter(log => log.status);
+        const counts = {};
+        statusLogs.forEach(log => {
+            const status = log.status;
+            counts[status] = (counts[status] || 0) + 1;
+        });
+
+        visualizations.destroyChart('statusChart');
+        const ctx = document.getElementById('statusChart');
+        if (!ctx) return;
+
+        const labels = Object.keys(counts).sort();
+        const data = labels.map(l => counts[l]);
+        const colors = visualizations.getColorsForLabels(labels);
+
+        visualizations.charts['statusChart'] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'リクエスト数',
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    createEndpointChart() {
+        const endpointLogs = this.allLogs.filter(log => log.uri || log.path || log.endpoint);
+        const counts = {};
+        endpointLogs.forEach(log => {
+            const endpoint = log.uri || log.path || log.endpoint;
+            counts[endpoint] = (counts[endpoint] || 0) + 1;
+        });
+
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+        visualizations.destroyChart('endpointChart');
+        const ctx = document.getElementById('endpointChart');
+        if (!ctx) return;
+
+        const labels = sorted.map(s => s[0]);
+        const data = sorted.map(s => s[1]);
+
+        visualizations.charts['endpointChart'] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'アクセス数',
+                    data: data,
+                    backgroundColor: visualizations.chartColors.primary,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     displayRecentEvents() {
         const container = document.getElementById('recentEvents');
-        const recentLogs = this.allLogs.slice(0, 10);
+        const recentLogs = this.allLogs.slice(0, 15);
 
         if (recentLogs.length === 0) {
             container.innerHTML = '<div class="no-results">イベントがありません</div>';
@@ -129,14 +278,16 @@ class SplunkSimulator {
         let html = '';
         recentLogs.forEach(log => {
             const time = new Date(log._time).toLocaleString('ja-JP');
-            const level = log.level || `HTTP ${log.status}`;
-            const message = log.message || log._raw;
+            const level = log.level || log.severity || `Status ${log.status}` || 'INFO';
+            const message = log.message || log._raw || '';
+            const source = log.source || 'unknown';
 
             html += `
                 <div class="event-row">
                     <div class="event-time">${time}</div>
-                    <div class="event-level ${log.level || 'INFO'}">${level}</div>
-                    <div class="event-message">${this.escapeHtml(message)}</div>
+                    <div class="event-level ${log.level || 'INFO'}">${this.escapeHtml(level)}</div>
+                    <div class="event-source" style="color: #667eea; font-weight: 600;">${this.escapeHtml(source)}</div>
+                    <div class="event-message">${this.escapeHtml(message.substring(0, 150))}</div>
                 </div>
             `;
         });
@@ -302,6 +453,32 @@ class SplunkSimulator {
                 visualizations.createTimeSeriesChart('searchChart', results);
             }
         }
+    }
+
+    // Custom Dashboard Modal
+    showPanelModal() {
+        document.getElementById('panelModal').style.display = 'flex';
+        document.getElementById('panelTitle').value = '';
+        document.getElementById('panelQuery').value = '';
+        document.getElementById('panelVizType').value = 'metric';
+    }
+
+    hidePanelModal() {
+        document.getElementById('panelModal').style.display = 'none';
+    }
+
+    createPanel() {
+        const title = document.getElementById('panelTitle').value.trim();
+        const query = document.getElementById('panelQuery').value.trim();
+        const vizType = document.getElementById('panelVizType').value;
+
+        if (!title || !query) {
+            alert('タイトルとクエリを入力してください');
+            return;
+        }
+
+        dashboardBuilder.addPanel(title, query, vizType);
+        this.hidePanelModal();
     }
 
     escapeHtml(text) {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CI/CD Test Project</title>
+    <title>Splunk Training Simulator</title>
     <style>
         * {
             margin: 0;
@@ -43,12 +43,6 @@
             margin-bottom: 40px;
         }
 
-        .projects {
-            display: grid;
-            gap: 20px;
-            margin-top: 40px;
-        }
-
         .project-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 8px;
@@ -79,20 +73,80 @@
             font-size: 3rem;
             margin-bottom: 15px;
         }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+            text-align: left;
+        }
+
+        .feature {
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .feature h3 {
+            color: #1e3c72;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .feature p {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+
+        .cta-button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 CI/CD Test Project</h1>
-        <p>継続的インテグレーション・デプロイメントのテストプロジェクト</p>
+        <h1>🔍 Splunk Training Simulator</h1>
+        <p>運用監視ツールSplunkの学習・トレーニングプラットフォーム<br>
+        実践的なログ分析とダッシュボード作成を無料で学習</p>
 
-        <div class="projects">
-            <a href="splunk-training-simulator/" class="project-card">
-                <div class="icon">🔍</div>
-                <h2>Splunk Training Simulator</h2>
-                <p>運用監視ツールSplunkの学習・トレーニング用シミュレーター</p>
-            </a>
+        <div class="features">
+            <div class="feature">
+                <h3>📊 多様なログフォーマット</h3>
+                <p>Apache、Nginx、Syslog、JSON、Database、Securityなど実践的なログデータ</p>
+            </div>
+            <div class="feature">
+                <h3>🔎 SPLクエリ実行</h3>
+                <p>Search Processing Languageで本格的なログ検索と分析</p>
+            </div>
+            <div class="feature">
+                <h3>📈 カスタムダッシュボード</h3>
+                <p>独自のダッシュボードを作成してデータを可視化</p>
+            </div>
+            <div class="feature">
+                <h3>🎓 チュートリアル</h3>
+                <p>初心者から上級者まで段階的に学べる教材</p>
+            </div>
         </div>
+
+        <a href="splunk-training-simulator/" class="cta-button">トレーニングを始める →</a>
     </div>
 </body>
 </html>
