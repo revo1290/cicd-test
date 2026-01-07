@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  /* Splunk Brand Colors */
+  --splunk-green: #65A637;
+  --splunk-dark-green: #4a7a28;
+  --splunk-navy: #1e2933;
+  --splunk-dark-bg: #171d1f;
+  --splunk-darker-bg: #0b1014;
+  --splunk-border: #2f3a3f;
+  --splunk-text: #e8e9eb;
+  --splunk-text-muted: #a8adb3;
+
+  /* Error & Warning Colors */
+  --error: #e74c3c;
+  --warning: #f39c12;
+  --success: #65A637;
+
+  /* Background & Foreground */
+  --background: var(--splunk-darker-bg);
+  --foreground: var(--splunk-text);
+}
+
+@theme inline {
+  /* Colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-splunk-green: var(--splunk-green);
+  --color-splunk-dark-green: var(--splunk-dark-green);
+  --color-splunk-navy: var(--splunk-navy);
+  --color-splunk-dark-bg: var(--splunk-dark-bg);
+  --color-splunk-darker-bg: var(--splunk-darker-bg);
+  --color-splunk-border: var(--splunk-border);
+  --color-splunk-text: var(--splunk-text);
+  --color-splunk-text-muted: var(--splunk-text-muted);
+  --color-error: var(--error);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+
+  /* Fonts */
+  --font-sans: 'Splunk Platform Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--splunk-dark-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--splunk-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--splunk-green);
+}
