@@ -56,9 +56,10 @@ export default function DashboardView() {
   // HTTP status codes
   const statusData = useMemo(() => {
     const statuses: Record<string, number> = {};
-    filteredLogs.forEach((log: any) => {
-      if (log.status || log.status_code) {
-        const status = log.status || log.status_code;
+    filteredLogs.forEach((log) => {
+      const logRecord = log as unknown as Record<string, unknown>;
+      const status = (logRecord.status as number) || (logRecord.status_code as number);
+      if (status) {
         const bucket = `${Math.floor(status / 100)}xx`;
         statuses[bucket] = (statuses[bucket] || 0) + 1;
       }
@@ -70,9 +71,10 @@ export default function DashboardView() {
   // Top endpoints
   const endpointData = useMemo(() => {
     const endpoints: Record<string, number> = {};
-    filteredLogs.forEach((log: any) => {
-      if (log.endpoint || log.uri) {
-        const endpoint = log.endpoint || log.uri;
+    filteredLogs.forEach((log) => {
+      const logRecord = log as unknown as Record<string, unknown>;
+      const endpoint = (logRecord.endpoint as string) || (logRecord.uri as string);
+      if (endpoint) {
         endpoints[endpoint] = (endpoints[endpoint] || 0) + 1;
       }
     });

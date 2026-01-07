@@ -2,8 +2,15 @@
 
 import { useState } from 'react';
 
+interface Panel {
+  id: number;
+  title: string;
+  query: string;
+  vizType: string;
+}
+
 export default function CustomDashboardView() {
-  const [panels, setPanels] = useState<any[]>([]);
+  const [panels, setPanels] = useState<Panel[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [panelTitle, setPanelTitle] = useState('');
   const [panelQuery, setPanelQuery] = useState('');

@@ -1,36 +1,128 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Splunk Training Simulator - Enterprise Edition
 
-## Getting Started
+本格的なSplunkトレーニングシミュレーター。15種類以上のエンタープライズログフォーマットでSPLクエリを学習できます。
 
-First, run the development server:
+## 🚀 機能
+
+### ログソース（15種類以上）
+- **コンテナ**: Kubernetes, Docker
+- **クラウド**: AWS CloudWatch, Azure Monitor
+- **システム**: Windows Event, Firewall, Load Balancer
+- **データベース**: Redis, MongoDB, Elasticsearch
+- **メッセージング**: Kafka
+- **監視**: Prometheus
+- **Webサーバー**: Nginx, Apache
+- **アプリケーション**: Application Logs
+
+### メイン機能
+- 📊 **ダッシュボード**: リアルタイムメトリクス、チャート、最新イベント
+- 🔍 **検索**: SPL風クエリパーサー、フィールドフィルタリング、比較演算子
+- 💾 **保存された検索**: よく使うクエリを保存・管理
+- 📤 **エクスポート**: CSV、JSON、Raw形式でデータをエクスポート
+- 📈 **カスタムダッシュボード**: 独自のパネルとクエリを作成
+- 🎓 **チュートリアル**: SPL学習のためのガイドと例
+
+## 🛠️ 技術スタック
+
+- **Next.js 16** - App Router
+- **TypeScript** - 型安全性
+- **Tailwind CSS v4** - Splunkテーマ
+- **Recharts** - データ可視化
+- **React Context** - 状態管理
+
+## 📦 インストール
+
+```bash
+npm install
+```
+
+## 🔧 開発サーバー
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+開発サーバーが http://localhost:3000 で起動します。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🏗️ ビルド
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## ▲ Vercelへのデプロイ
 
-To learn more about Next.js, take a look at the following resources:
+### 重要: Root Directoryの設定
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+このプロジェクトは `cicd-test` リポジトリの **サブディレクトリ** にあるため、Vercelで以下の設定が必要です：
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. [Vercel](https://vercel.com)にログイン
+2. 「Add New Project」→「Import Git Repository」
+3. GitHubリポジトリ `revo1290/cicd-test` を選択
+4. **重要**: 「Root Directory」を `splunk-simulator` に設定
+5. Framework Preset: Next.js（自動検出）
+6. 「Deploy」をクリック
 
-## Deploy on Vercel
+### Vercel CLI でのデプロイ
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Vercel CLIをインストール
+npm i -g vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# このディレクトリでデプロイ
+vercel
+```
+
+## 📚 使い方
+
+### 基本的な検索
+
+```spl
+# ソースで検索
+source=kubernetes
+
+# フィールドフィルター
+source=docker level=ERROR
+
+# 比較演算子
+source=nginx status>=500
+source=mongodb duration_ms>=100
+
+# AND条件（スペース区切り）
+source=kubernetes level=ERROR namespace=production
+```
+
+### 高度な検索
+
+```spl
+# 統計集計（※実装予定）
+source=nginx | stats count by status
+
+# Kubernetesのエラーをポッド別に集計
+source=kubernetes level=ERROR | stats count by pod
+```
+
+## 🎨 Splunkテーマ
+
+本物のSplunkに似た認証済みテーマ：
+- シグネチャグリーン: `#65A637`
+- ダークモード背景: `#0b1014`, `#171d1f`, `#1e2933`
+- グリーンのアクセントと光る効果
+
+## 📁 プロジェクト構成
+
+```
+splunk-simulator/
+├── app/                   # Next.js App Router
+├── components/            # Reactコンポーネント
+├── lib/
+│   ├── context/          # React Context (状態管理)
+│   ├── types/            # TypeScript型定義
+│   └── utils/            # ユーティリティ（データ生成など）
+└── vercel.json           # Vercel設定
+```
+
+## 📄 ライセンス
+
+MIT
