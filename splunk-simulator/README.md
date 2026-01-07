@@ -1,5 +1,5 @@
 # Splunk Training Simulator - Enterprise Edition
-
+https://cicd-test-rfbn.vercel.app/
 本格的なSplunkトレーニングシミュレーター。15種類以上のエンタープライズログフォーマットでSPLクエリを学習できます。
 
 ## 🚀 機能
