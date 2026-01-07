@@ -8,9 +8,28 @@ class SplunkSimulator {
         this.currentSearchResults = [];
         this.searchHistory = this.loadSearchHistory();
 
-        // Initialize managers
-        this.sourceFilterManager = new SourceFilterManager();
-        this.savedSearchManager = new SavedSearchManager();
+        // Initialize managers with error handling
+        try {
+            this.sourceFilterManager = new SourceFilterManager();
+            this.savedSearchManager = new SavedSearchManager();
+        } catch (error) {
+            console.error('Error initializing managers:', error);
+            // Fallback to basic initialization
+            this.sourceFilterManager = {
+                availableSources: [],
+                filterLogs: (logs) => logs,
+                toggleAllSources: () => {},
+                selectSource: () => {},
+                deselectSource: () => {}
+            };
+            this.savedSearchManager = {
+                getAllSearches: () => [],
+                saveSearch: () => {},
+                getSearch: () => null,
+                deleteSearch: () => {},
+                incrementRunCount: () => {}
+            };
+        }
 
         this.init();
     }
@@ -32,38 +51,70 @@ class SplunkSimulator {
     }
 
     setupEventListeners() {
-        // Sidebar toggle (for mobile)
-        const sidebarToggleOpen = document.getElementById('sidebarToggleOpen');
-        const sidebarToggleClose = document.getElementById('sidebarToggleClose');
-        const sidebar = document.getElementById('sidebar');
+        try {
+            // Sidebar toggle (for mobile)
+            const sidebarToggleOpen = document.getElementById('sidebarToggleOpen');
+            const sidebarToggleClose = document.getElementById('sidebarToggleClose');
+            const sidebar = document.getElementById('sidebar');
 
-        if (sidebarToggleOpen) {
-            sidebarToggleOpen.addEventListener('click', () => {
-                sidebar.classList.add('open');
-            });
-        }
-
-        if (sidebarToggleClose) {
-            sidebarToggleClose.addEventListener('click', () => {
-                sidebar.classList.remove('open');
-            });
-        }
-
-        // Close sidebar when clicking outside (mobile)
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth <= 1024 &&
-                sidebar.classList.contains('open') &&
-                !sidebar.contains(e.target) &&
-                !sidebarToggleOpen.contains(e.target)) {
-                sidebar.classList.remove('open');
+            if (sidebarToggleOpen && sidebar) {
+                sidebarToggleOpen.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    sidebar.classList.add('open');
+                });
             }
-        });
 
-        // Navigation
-        document.getElementById('dashboardBtn').addEventListener('click', () => this.switchView('dashboard'));
-        document.getElementById('searchBtn').addEventListener('click', () => this.switchView('search'));
-        document.getElementById('customDashboardBtn').addEventListener('click', () => this.switchView('customDashboard'));
-        document.getElementById('tutorialBtn').addEventListener('click', () => this.switchView('tutorial'));
+            if (sidebarToggleClose && sidebar) {
+                sidebarToggleClose.addEventListener('click', () => {
+                    sidebar.classList.remove('open');
+                });
+            }
+
+            // Close sidebar when clicking outside (mobile)
+            if (sidebar) {
+                document.addEventListener('click', (e) => {
+                    if (window.innerWidth <= 1024 &&
+                        sidebar.classList.contains('open') &&
+                        !sidebar.contains(e.target) &&
+                        (!sidebarToggleOpen || !sidebarToggleOpen.contains(e.target))) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            }
+
+            // Navigation - with error handling
+            const dashboardBtn = document.getElementById('dashboardBtn');
+            const searchBtn = document.getElementById('searchBtn');
+            const customDashboardBtn = document.getElementById('customDashboardBtn');
+            const tutorialBtn = document.getElementById('tutorialBtn');
+
+            if (dashboardBtn) {
+                dashboardBtn.addEventListener('click', () => {
+                    console.log('Dashboard button clicked');
+                    this.switchView('dashboard');
+                });
+            }
+
+            if (searchBtn) {
+                searchBtn.addEventListener('click', () => {
+                    console.log('Search button clicked');
+                    this.switchView('search');
+                });
+            }
+
+            if (customDashboardBtn) {
+                customDashboardBtn.addEventListener('click', () => {
+                    console.log('Custom dashboard button clicked');
+                    this.switchView('customDashboard');
+                });
+            }
+
+            if (tutorialBtn) {
+                tutorialBtn.addEventListener('click', () => {
+                    console.log('Tutorial button clicked');
+                    this.switchView('tutorial');
+                });
+            }
 
         // Time range and refresh
         document.getElementById('refreshBtn').addEventListener('click', () => this.refreshData());
@@ -174,6 +225,11 @@ class SplunkSimulator {
         document.getElementById('createPanelBtn').addEventListener('click', () => {
             this.createPanel();
         });
+
+        } catch (error) {
+            console.error('Error setting up event listeners:', error);
+            alert('一部の機能の初期化に失敗しました。ページを再読み込みしてください。');
+        }
     }
 
     setupSourceFilters() {
