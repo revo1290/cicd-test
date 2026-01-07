@@ -41,8 +41,9 @@ export default function SearchView() {
     if (format === 'csv') {
       const headers = Object.keys(searchResults[0] || {});
       content = headers.join(',') + '\n';
-      searchResults.forEach((log: any) => {
-        const row = headers.map((h) => JSON.stringify(log[h] || '')).join(',');
+      searchResults.forEach((log) => {
+        const logRecord = log as unknown as Record<string, unknown>;
+        const row = headers.map((h) => JSON.stringify(logRecord[h] || '')).join(',');
         content += row + '\n';
       });
       filename += '.csv';

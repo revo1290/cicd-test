@@ -59,7 +59,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
         <div className="lg:hidden flex-1">
           <select
             value={currentView}
-            onChange={(e) => setCurrentView(e.target.value as any)}
+            onChange={(e) => setCurrentView(e.target.value as 'dashboard' | 'search' | 'custom' | 'tutorial')}
             className="w-full px-4 py-2 bg-[var(--splunk-navy)] text-white rounded border border-[var(--splunk-border)] focus:outline-none focus:ring-2 focus:ring-[var(--splunk-green)]"
           >
             {views.map((view) => (

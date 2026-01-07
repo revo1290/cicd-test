@@ -68,16 +68,10 @@ export function SplunkProvider({ children }: { children: React.ReactNode }) {
   const [currentView, setCurrentView] = useState<'dashboard' | 'search' | 'custom' | 'tutorial'>('dashboard');
   const [timeRange, setTimeRange] = useState('1h');
 
-  // Initialize data on mount
-  useEffect(() => {
-    refreshData();
-    loadSavedSearches();
-    loadSearchHistory();
-  }, []);
-
   // Filter logs by selected sources
   const filteredLogs = logs.filter((log) => selectedSources.includes(log.source as LogSource));
 
+  // Define functions before using them in useEffect
   const refreshData = useCallback(() => {
     const timeRangeMap: Record<string, number> = {
       '5m': 5,
@@ -160,19 +154,32 @@ export function SplunkProvider({ children }: { children: React.ReactNode }) {
     }
   }, [savedSearches, executeSearch]);
 
-  const loadSavedSearches = () => {
+  // Initialize data on mount
+  useEffect(() => {
+    const timeRangeMap: Record<string, number> = {
+      '5m': 5,
+      '15m': 15,
+      '1h': 60,
+      '4h': 240,
+      '24h': 1440,
+      '7d': 10080,
+    };
+
+    const minutes = timeRangeMap[timeRange] || 60;
+    const newLogs = dataGenerator.generateAllLogs(30, minutes);
+    setLogs(newLogs);
+
     const saved = localStorage.getItem('savedSearches');
     if (saved) {
-      setSavedSearches(JSON.parse(saved));
+      setSavedSearches(JSON.parse(saved) as SavedSearch[]);
     }
-  };
 
-  const loadSearchHistory = () => {
     const history = localStorage.getItem('searchHistory');
     if (history) {
-      setSearchHistory(JSON.parse(history));
+      setSearchHistory(JSON.parse(history) as string[]);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const value: SplunkContextType = {
     logs,
@@ -221,26 +228,26 @@ function parseAndFilterLogs(query: string, logs: Log[]): Log[] {
     filters.forEach((filter) => {
       if (filter.includes('=')) {
         const [key, value] = filter.split('=').map((s) => s.trim());
-        results = results.filter((log: any) => {
-          const logValue = log[key];
+        results = results.filter((log) => {
+          const logValue = log[key as keyof Log];
           if (logValue === undefined) return false;
 
           // Handle comparison operators
           if (value.startsWith('>=')) {
             const compareValue = parseFloat(value.substring(2));
-            return parseFloat(logValue) >= compareValue;
+            return parseFloat(String(logValue)) >= compareValue;
           }
           if (value.startsWith('<=')) {
             const compareValue = parseFloat(value.substring(2));
-            return parseFloat(logValue) <= compareValue;
+            return parseFloat(String(logValue)) <= compareValue;
           }
           if (value.startsWith('>')) {
             const compareValue = parseFloat(value.substring(1));
-            return parseFloat(logValue) > compareValue;
+            return parseFloat(String(logValue)) > compareValue;
           }
           if (value.startsWith('<')) {
             const compareValue = parseFloat(value.substring(1));
-            return parseFloat(logValue) < compareValue;
+            return parseFloat(String(logValue)) < compareValue;
           }
 
           // Exact match
@@ -248,7 +255,7 @@ function parseAndFilterLogs(query: string, logs: Log[]): Log[] {
         });
       } else {
         // Text search across all fields
-        results = results.filter((log: any) =>
+        results = results.filter((log) =>
           Object.values(log).some((val) =>
             String(val).toLowerCase().includes(filter.toLowerCase())
           )
